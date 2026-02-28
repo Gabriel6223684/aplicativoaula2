@@ -1,0 +1,68 @@
+services:
+  # Serviço do banco de dados PostgreSQL
+  master:
+    # Imagem oficial do PostgreSQL baseada em Alpine Linux
+    image: postgres:18.3-alpine3.23
+    # Nome fixo do container do banco
+    container_name: app_master
+    restart: unless-stopped
+    # Variáveis de ambiente usadas pelo PostgreSQL na inicialização
+    environment:
+      # Nome do banco de dados, vindo do arquivo .env
+      POSTGRES_DB: ${DB_NAME}
+      # Usuário do banco, vindo do arquivo .env
+      POSTGRES_USER: ${DB_USER}
+      # Senha do banco, vindo do arquivo .env
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      # Define o fuso horário do container
+      TZ: ${TZ}
+      PGDATA: /var/lib/postgresql/18/docker
+    # Volumes persistentes e scripts de inicialização
+    volumes:
+      # Conectamos o diretório master do Windows ao diretório /var/lib/postgresql/data do container
+      - ./primary:/var/lib/postgresql/18/docker
+      # Script SQL executado automaticamente na primeira inicialização
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    ports:
+      - "${DB_PRIMARY_PORT}:5432"   # ← porta externa:5432 interno
+    # Conecta o container à rede interna do projeto
+    networks:
+      - app_network
+  # Serviço do banco de dados PostgreSQL
+  standby:
+    # Imagem oficial do PostgreSQL baseada em Alpine Linux
+    image: postgres:18.3-alpine3.23
+    # Nome fixo do container do banco
+    container_name: app_standby
+    restart: unless-stopped
+    # Variáveis de ambiente usadas pelo PostgreSQL na inicialização
+    environment:
+      # Nome do banco de dados, vindo do arquivo .env
+      POSTGRES_DB: ${DB_NAME}
+      # Usuário do banco, vindo do arquivo .env
+      POSTGRES_USER: ${DB_USER}
+      # Senha do banco, vindo do arquivo .env
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      # Define o fuso horário do container
+      TZ: ${TZ}
+      PGDATA: /var/lib/postgresql/18/docker
+    # Volumes persistentes e scripts de inicialização
+    volumes:
+      # Conectamos o diretório master do Windows ao diretório /var/lib/postgresql/18/docker do container
+      - ./standby:/var/lib/postgresql/18/docker
+    ports:
+      - "${DB_STANDBY_PORT}:5432"   # ← porta externa:5432 interno
+    # Conecta o container à rede interna do projeto
+    networks:
+      - app_network
+
+# Definição de volumes nomeados
+volumes:
+  # Volume responsável por armazenar os dados do PostgreSQL
+  pgdata:
+
+    # Definição das redes do projeto
+networks:
+  # Rede bridge interna para comunicação entre os containers
+  app_network:
+    driver: bridge
